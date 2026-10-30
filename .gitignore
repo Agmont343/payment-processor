@@ -1,0 +1,39 @@
+# Environment
+.env
+.env.*
+!.env.example
+!.env.docker
+
+# Virtual environment
+.venv/
+
+# IDE
+.idea/
+.vscode/
+.claude/
+.zcode/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Pytest
+.pytest_cache/
+
+# Ruff
+.ruff_cache/
+
+# Build / distribution
+dist/
+build/
+*.egg-info/
+
+# Project reports (internal, not for publication)
+*_REPORT.md
+payment_processor_plan_review.md
+
+# Original task specification (local only)
+redirect.pdf
+
+# Docker volumes
+postgres_data/
