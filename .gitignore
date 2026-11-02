@@ -2,7 +2,7 @@
 .env
 .env.*
 !.env.example
-!.env.docker
+!.env.docker.example
 
 # Virtual environment
 .venv/
@@ -19,6 +19,7 @@ __pycache__/
 
 # Pytest
 .pytest_cache/
+pytest_*.txt
 
 # Ruff
 .ruff_cache/
