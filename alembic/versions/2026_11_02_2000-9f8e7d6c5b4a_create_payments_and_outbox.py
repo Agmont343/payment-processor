@@ -1,8 +1,8 @@
 """Create payments and outbox tables.
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: 9f8e7d6c5b4a
 Revises:
-Create Date: 2026-10-28 15:00:00.000000
+Create Date: 2026-11-02 20:00:00.000000
 
 """
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "a1b2c3d4e5f6"
+revision: str = "9f8e7d6c5b4a"
 down_revision: str | Sequence[str] | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
@@ -82,6 +82,14 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("published_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column(
+            "attempts",
+            sa.Integer(),
+            server_default=sa.text("0"),
+            nullable=False,
+        ),
+        sa.Column("last_attempt_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("next_attempt_at", sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
