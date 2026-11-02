@@ -1,12 +1,12 @@
+from http import HTTPStatus
 from typing import Annotated
 
-from fastapi import APIRouter, Header, status
+from fastapi import APIRouter, Header
 
+from app.api.dependencies import PaymentServiceDep
 from app.api.v1.payments.create.request import CreatePaymentRequest
 from app.api.v1.payments.create.response import PaymentResponse
-from app.database import SessionDep
 from app.payments.dto import PaymentCreateDTO
-from app.payments.services import create_payment
 
 router = APIRouter()
 
@@ -14,11 +14,11 @@ router = APIRouter()
 @router.post(
     "/payments",
     response_model=PaymentResponse,
-    status_code=status.HTTP_202_ACCEPTED,
+    status_code=HTTPStatus.ACCEPTED,
     summary="Create a payment",
 )
 async def create_payment_endpoint(
-    session: SessionDep,
+    service: PaymentServiceDep,
     request: CreatePaymentRequest,
     idempotency_key: Annotated[
         str,
@@ -33,5 +33,5 @@ async def create_payment_endpoint(
         webhook_url=request.webhook_url,
         idempotency_key=idempotency_key,
     )
-    payment = await create_payment(session=session, data=dto)
+    payment, created = await service.create_payment(dto)
     return PaymentResponse.from_dto(payment)

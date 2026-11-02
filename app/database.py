@@ -1,4 +1,5 @@
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from typing import Annotated
 
 from fastapi import Depends
@@ -20,14 +21,23 @@ SessionFactory = async_sessionmaker(
 )
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    async with SessionFactory() as session:
-        try:
+@asynccontextmanager
+async def transaction_scope(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> AsyncGenerator[AsyncSession, None]:
+    """Управление транзакциями: commit при успехе, rollback при ошибке."""
+    async with session_factory() as session:
+        async with session.begin():
             yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
 
 
-SessionDep = Annotated[AsyncSession, Depends(get_db)]
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """FastAPI dependency для получения транзакционной сессии."""
+    async with transaction_scope(SessionFactory) as session:
+        yield session
+
+
+SessionDep = Annotated[
+    AsyncSession,
+    Depends(get_db, scope="function"),
+]

@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.consumer.gateway import PaymentGateway
-from app.consumer.service import ProcessResult, process_payment_event
+from app.consumer.service import PaymentProcessingService, ProcessResult
 from app.consumer.webhook import WebhookResult, WebhookSender
 from app.payments.exceptions import PaymentNotFound
 
@@ -42,7 +42,10 @@ def build_payments_new_handler(
     gateway: PaymentGateway,
     webhook_sender: WebhookSender,
     publish_retry: RetryPublisher,
-) -> Callable[..., Awaitable[None]]:
+) -> Callable[[PaymentEventPayload, RabbitMessage], Awaitable[None]]:
+    # Создаём PaymentProcessingService один раз при инициализации
+    processing_service = PaymentProcessingService(session_factory, gateway)
+
     async def handle_payments_new(
         message: PaymentEventPayload,
         rabbit_message: Annotated[RabbitMessage, Context("message")],
@@ -55,9 +58,7 @@ def build_payments_new_handler(
             retry_count + 1,
         )
         try:
-            result = await process_payment_event(
-                session_factory, gateway, message.payment_id
-            )
+            result = await processing_service.process_payment(message.payment_id)
         except PaymentNotFound:
             # Яд уходит в DLQ дефолтной политикой REJECT_ON_ERROR.
             raise

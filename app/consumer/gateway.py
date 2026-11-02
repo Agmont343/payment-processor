@@ -28,8 +28,10 @@ def gateway_outcome(payment_id: UUID) -> GatewayOutcome:
     )
     return GatewayOutcome(
         success=digest % 10 != 0,
-        delay_seconds=MIN_DELAY_SECONDS
-        + (digest >> 8) % (MAX_DELAY_SECONDS - MIN_DELAY_SECONDS + 1),
+        delay_seconds=(
+            MIN_DELAY_SECONDS
+            + (digest >> 8) % (MAX_DELAY_SECONDS - MIN_DELAY_SECONDS + 1)
+        ),
     )
 
 
