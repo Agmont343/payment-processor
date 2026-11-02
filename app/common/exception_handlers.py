@@ -1,6 +1,7 @@
+from http import HTTPStatus
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from starlette import status
 
 from app.payments.exceptions import IdempotencyConflict, PaymentNotFound
 
@@ -12,7 +13,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         exc: PaymentNotFound,
     ) -> JSONResponse:
         return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=HTTPStatus.NOT_FOUND,
             content={
                 "detail": str(exc),
                 "payment_id": str(exc.payment_id),
@@ -25,6 +26,6 @@ def register_exception_handlers(app: FastAPI) -> None:
         exc: IdempotencyConflict,
     ) -> JSONResponse:
         return JSONResponse(
-            status_code=status.HTTP_409_CONFLICT,
+            status_code=HTTPStatus.CONFLICT,
             content={"detail": str(exc)},
         )

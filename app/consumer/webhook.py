@@ -1,4 +1,5 @@
 from enum import Enum
+from http import HTTPStatus
 from typing import Any, Protocol
 
 import httpx
@@ -48,8 +49,11 @@ class HttpxWebhookSender:
                 response = await client.post(url, json=payload)
         except httpx.TransportError:
             return WebhookResult.TRANSIENT
-        if 200 <= response.status_code < 300:
+        if HTTPStatus.OK <= response.status_code < 300:
             return WebhookResult.SUCCESS
-        if response.status_code == 429 or response.status_code >= 500:
+        if (
+            response.status_code == HTTPStatus.TOO_MANY_REQUESTS
+            or response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR
+        ):
             return WebhookResult.TRANSIENT
         return WebhookResult.PERMANENT
