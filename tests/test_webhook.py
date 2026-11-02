@@ -1,3 +1,6 @@
+from http import HTTPStatus
+from typing import Any
+
 import httpx
 import pytest
 
@@ -36,7 +39,7 @@ async def test_other_4xx_are_permanent(status: int) -> None:
 
 
 async def test_3xx_without_redirect_is_permanent() -> None:
-    assert await _sender(302).send("https://example.com/hook", {}) is (
+    assert await _sender(HTTPStatus.FOUND).send("https://example.com/hook", {}) is (
         WebhookResult.PERMANENT
     )
 
@@ -64,12 +67,12 @@ async def test_timeout_and_network_errors_are_transient(exc: Exception) -> None:
 
 
 async def test_payload_is_sent_as_json_body() -> None:
-    seen: dict = {}
+    seen: dict[str, Any] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
         seen["url"] = str(request.url)
         seen["body"] = request.read()
-        return httpx.Response(200)
+        return httpx.Response(HTTPStatus.OK)
 
     sender = HttpxWebhookSender(transport=httpx.MockTransport(handler))
     await sender.send("https://example.com/hook", {"event_id": "abc"})
@@ -79,7 +82,7 @@ async def test_payload_is_sent_as_json_body() -> None:
 
 
 def _recording_sender(
-    status: int = 200,
+    status: int = HTTPStatus.OK,
 ) -> tuple[HttpxWebhookSender, list[str]]:
     seen: list[str] = []
 
@@ -103,8 +106,10 @@ def _recording_sender(
 async def test_forbidden_url_is_permanent_without_http_call(
     url: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # HttpxWebhookSender читает production settings из .env; для проверки
+    # запрета приватных URL явно выключаем флаг.
     monkeypatch.setattr(settings, "WEBHOOK_ALLOW_PRIVATE", False)
-    sender, seen = _recording_sender(status=200)
+    sender, seen = _recording_sender(status=HTTPStatus.OK)
 
     assert await sender.send(url, {}) is WebhookResult.PERMANENT
     assert seen == []
@@ -114,21 +119,24 @@ async def test_allowed_url_still_reaches_transport(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(settings, "WEBHOOK_ALLOW_PRIVATE", False)
-    sender, seen = _recording_sender(status=200)
+    sender, seen = _recording_sender(status=HTTPStatus.OK)
 
-    assert await sender.send("https://example.com/hook", {}) is WebhookResult.SUCCESS
+    assert await sender.send("https://example.com/hook", {}) is (WebhookResult.SUCCESS)
     assert seen == ["https://example.com/hook"]
 
 
 async def test_private_url_allowed_only_with_flag(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    sender, seen = _recording_sender(status=200)
+    sender, seen = _recording_sender(status=HTTPStatus.OK)
+
     monkeypatch.setattr(settings, "WEBHOOK_ALLOW_PRIVATE", False)
     assert await sender.send("http://127.0.0.1:8081/hook", {}) is (
         WebhookResult.PERMANENT
     )
 
     monkeypatch.setattr(settings, "WEBHOOK_ALLOW_PRIVATE", True)
-    assert await sender.send("http://127.0.0.1:8081/hook", {}) is WebhookResult.SUCCESS
+    assert await sender.send("http://127.0.0.1:8081/hook", {}) is (
+        WebhookResult.SUCCESS
+    )
     assert seen == ["http://127.0.0.1:8081/hook"]
